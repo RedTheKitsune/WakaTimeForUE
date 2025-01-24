@@ -26,7 +26,7 @@ public:
 	static bool RunCommand(std::string CommandToRun, bool bRequireNonZeroProcess = false,
 	                       std::string ExeToRun = "C:\\Windows\\System32\\cmd.exe", int WaitMs = 0,
 	                       bool bRunPure = false,
-	                       std::string Directory = "");
+	                       std::string Directory = "", bool Debug = false);
 
 	/// <summary>
 	///	Overload for RunCommand that uses Powershell
@@ -39,7 +39,7 @@ public:
 	/// <returns> True, if process succeeds (and its return code is non-zero if required) </returns>
 	static bool RunPowershellCommand(std::string CommandToRun, bool bRequireNonZeroProcess = false, int WaitMs = 0,
 	                                 bool bRunPure = false,
-	                                 std::string Directory = "");
+	                                 std::string Directory = "", bool Debug = false);
 
 	/// <summary>
 	///	Overload for RunCommand that uses Cmd
@@ -52,7 +52,7 @@ public:
 	/// <returns> True, if process succeeds (and its return code is non-zero if required) </returns>
 	static bool RunCmdCommand(std::string CommandToRun, bool bRequireNonZeroProcess = false, int WaitMs = 0,
 	                          bool bRunPure = false,
-	                          std::string Directory = "");
+	                          std::string Directory = "", bool Debug = false);
 
 	/// <summary>
 	/// Unzips a .zip archive into a directory using powershell

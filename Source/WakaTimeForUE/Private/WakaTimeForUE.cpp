@@ -22,6 +22,7 @@ using namespace std;
 // Global variables
 string GAPIKey("");
 string GAPIUrl("");
+bool GDebug;
 string GBaseCommand("");
 string GUserProfile;
 string GProjectPath;
@@ -49,6 +50,8 @@ TSharedRef<SEditableTextBox> GAPIKeyBlock = SNew(SEditableTextBox)
 .Text(FText::FromString(FString(UTF8_TO_TCHAR(GAPIKey.c_str())))).MinDesiredWidth(500);
 TSharedRef<SEditableTextBox> GAPIUrlBlock = SNew(SEditableTextBox)
 .Text(FText::FromString(FString(UTF8_TO_TCHAR(GAPIUrl.c_str())))).MinDesiredWidth(500);
+TSharedRef<SCheckBox> GDebugBlock = SNew(SCheckBox)
+.IsChecked(GDebug ? ECheckBoxState::Checked : ECheckBoxState::Unchecked);
 TSharedRef<SWindow> SettingsWindow = SNew(SWindow);
 TSharedPtr<FSlateStyleSet> StyleSetInstance = nullptr;
 
@@ -225,6 +228,7 @@ void FWakaTimeForUEModule::HandleStartupApiCheck(string ConfigFilePath)
 
 void FWakaTimeForUEModule::ReadConfig(string ConfigFilePath, bool& bFoundApiKey, bool& bFoundApiUrl)
 {
+	bool bFoundDebug = false;
 	string Line;
 	
 	fstream ConfigFile(ConfigFilePath);
@@ -244,16 +248,32 @@ void FWakaTimeForUEModule::ReadConfig(string ConfigFilePath, bool& bFoundApiKey,
 			GAPIUrlBlock.Get().SetText(FText::FromString(FString(UTF8_TO_TCHAR(GAPIUrl.c_str()))));
 			bFoundApiUrl = true;
 		}
+
+		if (Line.find("debug") != string::npos)
+		{
+			string DebugStr = Line.substr(Line.find(" = ") + 3);
+			GDebug = DebugStr == "true";
+			GDebugBlock.Get().SetIsChecked(GDebug ? ECheckBoxState::Checked : ECheckBoxState::Unchecked);
+			bFoundDebug = true;
+		}
 	}
 
 	if(!bFoundApiKey)
 	{
 		GAPIKeyBlock.Get().SetText(FText::GetEmpty());
+		GAPIKey = "";
 	}
 
 	if(!bFoundApiUrl)
 	{
 		GAPIUrlBlock.Get().SetText(FText::GetEmpty());
+		GAPIUrl = "";
+	}
+
+	if(!bFoundDebug)
+	{
+		GDebugBlock.Get().SetIsChecked(ECheckBoxState::Unchecked);
+		GDebug = false;
 	}
 
 	ConfigFile.close();
@@ -297,12 +317,12 @@ string FWakaTimeForUEModule::GetProjectName()
 	const TCHAR* ProjectName = FApp::GetProjectName();
 	string MainModuleName = TCHAR_TO_UTF8(ProjectName);
 	const UGeneralProjectSettings& ProjectSettings = *GetDefault<UGeneralProjectSettings>();
-	if (ProjectSettings.ProjectName != "")
+	if (!ProjectSettings.ProjectName.IsEmpty())
 	{
 		return TCHAR_TO_UTF8(*(ProjectSettings.ProjectName));
 	}
 
-	if (MainModuleName != "")
+	if (!MainModuleName.empty())
 	{
 		return TCHAR_TO_UTF8(ProjectName);
 	}
@@ -358,41 +378,69 @@ void FWakaTimeForUEModule::OpenSettingsWindow()
 		[
 			SNew(SVerticalBox)
 			+ SVerticalBox::Slot()
-			  .HAlign(HAlign_Left)
-			  .VAlign(VAlign_Top)
-			[
-				SNew(STextBlock)
-				.Text(FText::FromString(TEXT("Your api key:"))).MinDesiredWidth(500)
-			]
-			+ SVerticalBox::Slot()
-			  .HAlign(HAlign_Center)
-			  .VAlign(VAlign_Center)
-			[
-				GAPIKeyBlock
-			]
-			+ SVerticalBox::Slot()
+			.AutoHeight()
 			.HAlign(HAlign_Left)
 			.VAlign(VAlign_Top)
 			[
 				SNew(STextBlock)
-				.Text(FText::FromString(TEXT("Your api url:"))).MinDesiredWidth(500)
+				.Text(FText::FromString(TEXT("Your api key:")))//.MinDesiredWidth(500)
 			]
 			+ SVerticalBox::Slot()
-				.HAlign(HAlign_Center)
-				.VAlign(VAlign_Center)
+			.AutoHeight()
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
+			[
+				GAPIKeyBlock
+			]
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.HAlign(HAlign_Left)
+			.VAlign(VAlign_Top)
+			[
+				SNew(STextBlock)
+				.Text(FText::FromString(TEXT("Your api url:")))//.MinDesiredWidth(500)
+			]
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
 			[
 				GAPIUrlBlock
 			]
+			+ SVerticalBox::Slot()
+			.AutoHeight()
+			.HAlign(HAlign_Left)
+			.VAlign(VAlign_Top)
+			[
+				SNew(SHorizontalBox)
+				+SHorizontalBox::Slot()
+				.AutoWidth()
+				.HAlign(HAlign_Left)
+				.VAlign(VAlign_Center)
+				[
+					SNew(STextBlock)
+					.Text(FText::FromString(TEXT("Debug:")))
+				]
+				+SHorizontalBox::Slot()
+				.HAlign(HAlign_Left)
+				.VAlign(VAlign_Center)
+				[
+					GDebugBlock
+				]
+			]
 		]
 		+ SVerticalBox::Slot()
-		  .HAlign(HAlign_Center)
-		  .VAlign(VAlign_Bottom)
+		.AutoHeight()
+		.HAlign(HAlign_Center)
+		.VAlign(VAlign_Bottom)
 		[
 			SNew(SBox).WidthOverride(100)
 			[
 				SNew(SButton)
+				.HAlign(HAlign_Center)
+				.VAlign(VAlign_Center)
 				.Text(FText::FromString(TEXT("Save")))
-		.OnClicked(FOnClicked::CreateRaw(this, &FWakaTimeForUEModule::SaveData))
+				.OnClicked(FOnClicked::CreateRaw(this, &FWakaTimeForUEModule::SaveData))
 			]
 		]
 	];
@@ -415,6 +463,7 @@ FReply FWakaTimeForUEModule::SaveData()
 {
 	GAPIKey = TCHAR_TO_UTF8(*(GAPIKeyBlock.Get().GetText().ToString()));
 	GAPIUrl = TCHAR_TO_UTF8(*(GAPIUrlBlock.Get().GetText().ToString()));
+	GDebug = GDebugBlock.Get().IsChecked();
 
 	string ConfigFileDir = string(GUserProfile) + "/.wakatime.cfg";
 	fstream ConfigFile(ConfigFileDir);
@@ -429,6 +478,10 @@ FReply FWakaTimeForUEModule::SaveData()
 		{
 			ConfigFile << "api_url = " << GAPIUrl;
 		}
+		if(GDebug)
+		{
+			ConfigFile << "debug = true";
+		}
 		ConfigFile.close();
 
 		SettingsWindow.Get().RequestDestroyWindow();
@@ -438,7 +491,7 @@ FReply FWakaTimeForUEModule::SaveData()
 	map<string, string> Data;
 	
 	string TempLine;
-	while (getline(ConfigFile, TempLine)) // RedKitsune(Turn entire ini file into TMap);
+	while (getline(ConfigFile, TempLine)) // RedKitsune(Turn entire ini file into map);
 	{
 		if(TempLine.find("[settings]") != string::npos) continue;
 
@@ -454,6 +507,13 @@ FReply FWakaTimeForUEModule::SaveData()
 	
 	UpdateIniEntry(bIsDirty, Data, "api_key", GAPIKey);
 	UpdateIniEntry(bIsDirty, Data, "api_url", GAPIUrl);
+	if(GDebug)
+	{
+		UpdateIniEntry(bIsDirty, Data, "debug", "true");
+	} else if(Data.contains("debug"))
+	{
+		Data.erase("debug");
+	}
 	
 	if(bIsDirty)
 	{
@@ -501,7 +561,12 @@ void FWakaTimeForUEModule::UpdateIniEntry(bool& bIsDirty, map<string, string>& D
 // Lifecycle methods
 void FWakaTimeForUEModule::SendHeartbeat(bool bFileSave, string Activity, string EntityType, FString Entity, string Language)
 {
-	UE_LOG(LogWakaTime, Log, TEXT("Sending Heartbeat"));
+	if(GAPIKey.empty()) return;
+	
+	if(GDebug)
+	{
+		UE_LOG(LogWakaTime, Log, TEXT("Sending Heartbeat"));
+	}
 
 	string Command = GBaseCommand;
 
@@ -530,22 +595,25 @@ void FWakaTimeForUEModule::SendHeartbeat(bool bFileSave, string Activity, string
 	bool bSuccess = false;
 	try
 	{
-		bSuccess = FWakaTimeHelpers::RunPowershellCommand(Command, false, INFINITE, true);
+		bSuccess = FWakaTimeHelpers::RunPowershellCommand(Command, false, INFINITE, true, "", GDebug);
 	}
 	catch (int Err)
 	{
 		UE_LOG(LogWakaTime, Warning, TEXT("%i"), Err);
 	}
-
+	
 	//bool success = RunCommand(command, false, baseCommand,INFINITE, true);
-	if (bSuccess)
+	if(GDebug)
 	{
-		UE_LOG(LogWakaTime, Log, TEXT("Heartbeat successfully sent."));
-	}
-	else
-	{
-		UE_LOG(LogWakaTime, Error, TEXT("Heartbeat couldn't be sent."));
-		UE_LOG(LogWakaTime, Error, TEXT("Error code = %d"), GetLastError());
+		if (bSuccess)
+		{
+			UE_LOG(LogWakaTime, Log, TEXT("Heartbeat successfully sent."));
+		}
+		else
+		{
+			UE_LOG(LogWakaTime, Error, TEXT("Heartbeat couldn't be sent."));
+			UE_LOG(LogWakaTime, Error, TEXT("Error code = %d"), GetLastError());
+		}
 	}
 }
 

@@ -14,7 +14,7 @@ bool FWakaTimeHelpers::PathExists(const std::string& Path)
 
 bool FWakaTimeHelpers::RunCommand(std::string CommandToRun, bool bRequireNonZeroProcess,
                                   std::string ExeToRun, int WaitMs, bool bRunPure,
-                                  std::string Directory)
+                                  std::string Directory, bool Debug)
 {
 	if (bRunPure)
 	{
@@ -25,7 +25,10 @@ bool FWakaTimeHelpers::RunCommand(std::string CommandToRun, bool bRequireNonZero
 		CommandToRun = " /c start /b " + CommandToRun;
 	}
 
-	UE_LOG(LogWakaTime, Log, TEXT("Running command: %s"), *FString(UTF8_TO_TCHAR(CommandToRun.c_str())));
+	if(Debug)
+	{
+		UE_LOG(LogWakaTime, Log, TEXT("Running command: %s"), *FString(UTF8_TO_TCHAR(CommandToRun.c_str())));
+	}
 
 	STARTUPINFO Startupinfo;
 	PROCESS_INFORMATION Process_Information;
@@ -60,7 +63,10 @@ bool FWakaTimeHelpers::RunCommand(std::string CommandToRun, bool bRequireNonZero
 		bReturnValue = true;
 	}
 
-	WaitForSingleObject(Process_Information.hProcess, WaitMs);
+	if(Debug)
+	{
+		WaitForSingleObject(Process_Information.hProcess, WaitMs);	
+	}
 	
 	CloseHandle(Process_Information.hThread);
 	CloseHandle(Process_Information.hProcess);
@@ -71,19 +77,19 @@ bool FWakaTimeHelpers::RunCommand(std::string CommandToRun, bool bRequireNonZero
 
 bool FWakaTimeHelpers::RunPowershellCommand(std::string CommandToRun, bool bRequireNonZeroProcess, int WaitMs,
                                             bool bRunPure,
-                                            std::string Directory)
+                                            std::string Directory, bool Debug)
 {
 	return RunCommand(CommandToRun, bRequireNonZeroProcess,
 	                  "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", WaitMs,
-	                  bRunPure, Directory);
+	                  bRunPure, Directory, Debug);
 }
 
 
 bool FWakaTimeHelpers::RunCmdCommand(std::string CommandToRun, bool bRequireNonZeroProcess, int WaitMs, bool bRunPure,
-                                     std::string Directory)
+                                     std::string Directory, bool Debug)
 {
 	return RunCommand(CommandToRun, bRequireNonZeroProcess, "C:\\Windows\\System32\\cmd.exe", WaitMs,
-	                  bRunPure, Directory);
+	                  bRunPure, Directory, Debug);
 }
 
 
